@@ -384,6 +384,8 @@
   }
   input.commercial-input:focus{outline:2px solid var(--teal);outline-offset:1px;}
   input.commercial-input::placeholder{color:#c3c9ce;}
+  .commercial-wrap{display:flex;flex-direction:column;align-items:center;gap:2px;}
+  .commercial-unit{font-size:9px;color:var(--grey);white-space:nowrap;}
 
   .side-panels{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:26px;}
   .side-panel{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:18px 20px;}
@@ -508,7 +510,7 @@
             <th>Commercial<small>Stage</small></th>
             <th>Negotiation</th>
             <th>Won / Lost</th>
-            <th>Commercial<small>Value (₹)</small></th>
+            <th>Commercial<small>Value</small></th>
             <th>Tower</th>
           </tr>
         </thead>
@@ -559,7 +561,7 @@
             <th>Commercial<small>Stage</small></th>
             <th>Negotiation</th>
             <th>Won / Lost</th>
-            <th>Commercial<small>Value (₹)</small></th>
+            <th>Commercial<small>Value</small></th>
             <th>Tower</th>
           </tr>
         </thead>
@@ -800,14 +802,14 @@ const accountEntries = [
   ["Nayara Energy", "SOW", "Met client with oem for scope rfp review", null, "Data", null],
   ["Star Health (Cloud)", "SOW", "SOW is sent", null, "Cloud", null],
 
-  ["NSE", "Commercial", "Sent SOW and Commercials", null, "SOC", null],
+  ["NSE", "Commercial", "Sent SOW and Commercials", null, "SOC", 2500000, "INR", false],
 
   ["ITC", "Negotiation", "To take update on scope from client , will get confirmation by 16th sept", null, "GRC", null],
   ["USFB (SOC Resources Requirement)", "Negotiation", "Sent 16 profiles, awaiting for clients response", null, "SOC", null],
   ["LendenClub", "Negotiation", "sent sow and commercials for resource, trupti to confirm on status", null, "Cloud", null],
   ["Mahindra & Mahindra (M&M)", "Negotiation", "SOW and commercial", null, "ITDR", null],
 
-  ["RBL", "Won/Lost", null, null, "Data", null],
+  ["RBL", "Won/Lost", "Lost", "lost", "Data", null, "INR", false],
   ["ADA (Data Classification)", "Won/Lost", "Lost - did not win tender", "lost", "Data", null],
   ["Asian Paints", "Won/Lost", "Lost", "lost", "Unassigned", null],
   ["IBM QRadar Oman", "Won/Lost", "Lost - not pursuing", "lost", "SOC", null],
@@ -824,9 +826,9 @@ const partnerEntries = [
 
   ["Securis360 (Resources - Splunk)", "SOW", "sent 3 profiles for splunk , has sent to client waiting for next update", null, "SOC", null],
 
-  ["GBM Oman ( Resource )", "Commercial", "Proposal sent no response from client", null, "Unassigned", null],
-  ["GBM (UAE - Splunk)", "Commercial", "Have sent 1 profile and commercial", null, "SOC", null],
-  ["Bank of Baghdad (Inspire Jordan)", "Commercial", "Followup sent for budget proposal submission", null, "SOC", null],
+  ["GBM Oman ( Resource )", "Commercial", "Proposal sent no response from client", null, "Unassigned", 800000, "USD", true],
+  ["GBM (UAE - Splunk)", "Commercial", "Have sent 1 profile and commercial", null, "SOC", 24000, "USD", true],
+  ["Bank of Baghdad (Inspire Jordan)", "Commercial", "Followup sent for budget proposal submission", null, "SOC", 200000, "USD", true],
 
   ["KSA (Cybersecurity & Network Resources)", "Negotiation", "Opportunity is expected to have a longer sales cycle with multiple rounds; proposal has been submitted based on the shared security requirements, and they will keep us posted on further updates.", null, "Unassigned", null],
 ];
@@ -889,6 +891,8 @@ function buildRow(entry, onCommercialChange, onStageChange){
   });
 
   const commercialTd = document.createElement('td');
+  const commercialWrap = document.createElement('div');
+  commercialWrap.className = 'commercial-wrap';
   const commercialInput = document.createElement('input');
   commercialInput.type = 'number';
   commercialInput.className = 'commercial-input';
@@ -896,12 +900,17 @@ function buildRow(entry, onCommercialChange, onStageChange){
   commercialInput.min = '0';
   commercialInput.step = '1000';
   if(entry[5] != null) commercialInput.value = entry[5];
+  const commercialUnit = document.createElement('small');
+  commercialUnit.className = 'commercial-unit';
+  commercialUnit.textContent = (entry[6] === 'USD' ? '$' : '₹') + (entry[7] ? '/year' : '');
   commercialInput.addEventListener('input', ()=>{
     const v = commercialInput.value;
     entry[5] = v === '' ? null : Number(v);
     if(onCommercialChange) onCommercialChange();
   });
-  commercialTd.appendChild(commercialInput);
+  commercialWrap.appendChild(commercialInput);
+  commercialWrap.appendChild(commercialUnit);
+  commercialTd.appendChild(commercialWrap);
   tr.appendChild(commercialTd);
 
   const towerTd = document.createElement('td');
@@ -934,8 +943,12 @@ function buildRow(entry, onCommercialChange, onStageChange){
 function allEntries(){ return accountEntries.concat(partnerEntries); }
 
 function updateCommercialTotal(entries, el){
-  const total = entries.reduce((sum,e)=> sum + (e[5]!=null ? Number(e[5]) : 0), 0);
-  el.textContent = formatINR(total);
+  const inr = entries.reduce((sum,e)=> sum + (e[6] === 'INR' && e[5]!=null ? Number(e[5]) : 0), 0);
+  const usd = entries.reduce((sum,e)=> sum + (e[6] === 'USD' && e[5]!=null ? Number(e[5]) : 0), 0);
+  const parts = [];
+  if(inr) parts.push(formatINR(inr));
+  if(usd) parts.push('$' + Math.round(usd).toLocaleString('en-US') + '/year');
+  el.textContent = parts.length ? parts.join(' | ') : '₹0';
 }
 
 const tbodyAccounts = document.getElementById('tbodyAccounts');
